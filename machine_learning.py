@@ -18,10 +18,11 @@ import utils.indicators
 from config import config_params
 
 
-
 # FUNCTIONS
-def apply_machine_learning(ohlc_df):
-    
+def calculate_indicators(ohlc_df):
+    """ Uses the input ohlc time history to calculate indicator values for all the
+    lookback periods specified in the project config file. """
+
     # FORMAT INPUT DATA
     finage_df = ohlc_df.copy()
     finage_df.columns = config_params['ohlc_file_column_list']
@@ -31,7 +32,6 @@ def apply_machine_learning(ohlc_df):
 
     # ADD INDICATORS
     print('Calculating indicators... [' + str(datetime.datetime.utcnow()) + ']')
-    start_indicators = datetime.datetime.utcnow()
     master_df = finage_df.copy()    # master data frame that will hold all cols of all indicators
 
     # Bollinger bands
@@ -118,12 +118,80 @@ def apply_machine_learning(ohlc_df):
         chande_momentum_oscillator_df = pd.merge(chande_momentum_oscillator_df, temp_chande_momentum_oscillator_df, on=config_params['ohlc_file_column_list'])
     master_df = pd.merge(master_df, chande_momentum_oscillator_df, on=config_params['ohlc_file_column_list'])    # add to master
 
-    end_indicators = datetime.datetime.utcnow()
+    # Add additional cols
+    master_df['C1'] = (master_df['Close'].shift(periods=-1) - master_df['Close']) / master_df['Close']    # calc % changes 1 period into future
+    master_df['target'] = np.where(master_df['C1']>0,1,0)    # create binary target variable column
+    # master_df.insert(0, 'fold', range(1, 1 + len(master_df)))    # add fold column
+    master_df.to_csv(config_params['indicator_output_path'], index=False)    # output to local models file as csv
 
+    prediction_input_df = master_df.iloc[-config_params['num_ml_predictions']:, :]    # trim down to just necessary predictions
+    
+    return prediction_input_df
+
+
+def apply_online_machine_learning(prediction_input_df):
+    """ Use h2o to calculate model predictions values by connecting to their servers online. """
 
     # RUN H2O
-    start_h2o = datetime.datetime.utcnow()
-    prediction_input_df = master_df.iloc[-config_params['num_ml_predictions']:, :]
+    # Initialize connection
+    h2o.init()
+
+    # Load indicators
+    observations = h2o.import_file(path=config_params['indicator_output_path'], destination_frame='observations')
+
+    # Load models
+    # Moving average
+    moving_average_model = h2o.import_mojo(config_params['h2o_model_dict']['moving_average'])
+    moving_average_predictions = moving_average_model.predict(observations)
+
+    # Metamodel
+    meta_model = h2o.import_mojo(config_params['h2o_model_dict']['meta'])
+    meta_predictions = meta_model.predict(observations)
+
+    # RSI
+    rsi_model = h2o.import_mojo(config_params['h2o_model_dict']['rsi'])
+    rsi_predictions = rsi_model.predict(observations)
+
+    # ROC momentum
+    roc_momentum_model = h2o.import_mojo(config_params['h2o_model_dict']['roc_momentum'])
+    roc_momentum_predictions = roc_momentum_model.predict(observations)
+
+    # Volatility
+    volatility_model = h2o.import_mojo(config_params['h2o_model_dict']['volatility'])
+    volatility_predictions = volatility_model.predict(observations)
+
+    # Extract and output predictions
+    prediction_df = pd.DataFrame()
+    prediction_df['moving_average'] = moving_average_predictions.as_data_frame()['p1']
+    prediction_df['meta'] = meta_predictions.as_data_frame()['p1']
+    prediction_df['rsi'] = rsi_predictions.as_data_frame()['p1']
+    prediction_df['roc_momentum'] = roc_momentum_predictions.as_data_frame()['p1']
+    prediction_df['volatility'] = volatility_predictions.as_data_frame()['p1']
+    prediction_list = [
+        prediction_df['meta'].iloc[-1],
+        prediction_df['moving_average'].iloc[-1],
+        prediction_df['volatility'].iloc[-1],
+        prediction_df['rsi'].iloc[-1],
+        prediction_df['roc_momentum'].iloc[-1],
+    ]
+
+    prediction_dict = {
+        'meta': prediction_df['meta'].iloc[-1],
+        'moving_average': prediction_df['moving_average'].iloc[-1],
+        'volatility': prediction_df['volatility'].iloc[-1],
+        'rsi': prediction_df['rsi'].iloc[-1],
+        'roc_momentum': prediction_df['roc_momentum'].iloc[-1],
+        'cci': None,
+        'top_variables': None,
+        'mean': stats.mean(prediction_list),
+        'median': stats.median(prediction_list),
+    }
+    
+    return prediction_dict
+
+
+def apply_offline_machine_learning(prediction_input_df):
+    """ Use h2o to calculate model prediction values without connecting to h2o servers. """
 
     # Model 1 - meta
     m1_df = h2o.mojo_predict_pandas(
@@ -181,16 +249,7 @@ def apply_machine_learning(ohlc_df):
         'mean': stats.mean([m1_prediction, m2_prediction, m3_prediction, m4_prediction, m5_prediction]),
         'median': stats.median([m1_prediction, m2_prediction, m3_prediction, m4_prediction, m5_prediction]),
     }
-    end_h2o = datetime.datetime.utcnow()
 
-    # PRINT MACHINE LEARNING RUNTIME STATS TO SCREEN
-    print(prediction_dict)
-
-    print('\nMachine Learning Runtime Breakdown...')
-    print('Time spent calculating indicators: {}'.format(end_indicators - start_indicators))
-    print('Time spent running h2o models (locally): {}'.format(end_h2o - start_h2o))
-    print('Total machine learning module runtime: {}'.format(end_h2o - start_indicators))
-    
     return prediction_dict
 
 

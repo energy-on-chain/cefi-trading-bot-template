@@ -16,7 +16,7 @@ config_params = {
     'input_price_file_path': 'gs://chainview-capital-dashboard-bucket-official/data/finage_fast/finage_ohlc_BTCUSD_24hr_fast.csv',
     'input_log_file_path': 'gs://chainview-capital-dashboard-bucket-official/bots/project_x_24hr/cvc_project_x_24hr_results_log.csv',
     'input_machine_learning_file_path': None,    # FIXME: there is no external machine learning file in this full-python implementation of the bot (it's all done inside the bot)
-    'indicator_output_path': None,     # FIXME: unnecessary, consider deleting  
+    'indicator_output_path': 'models/ml_predictions.csv',     # FIXME: unnecessary, consider deleting  
     'predictions_output_path': None,   # FIXME: unnecessary, consider deleting
     'ohlc_file_column_list': [ "Open", "High", "Low", "Close", "Volume", "Unix", "Time"],
     'log_file_column_list': ["Open", "High", "Low", "Close", "Volume", "Unix", "Time", 'moving_average', 'meta', 'cci', 'volatility', 'top_variables', 'roc_momentum', 'rsi', '', 'median', 'action', 'falconx_usd_balance', 'falconx_btc_balance', 'falconx_btc_price_quote', 'trade_net_profit', 'running_trade_net_profit', 'trade_win_or_loss'],

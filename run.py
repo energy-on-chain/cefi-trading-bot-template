@@ -14,7 +14,7 @@ import pandas as pd
 import numpy as np
 
 from exchanges.falconx import get_falconx_connection
-from machine_learning import apply_machine_learning
+from machine_learning import apply_offline_machine_learning, apply_online_machine_learning, calculate_indicators
 from strategy import apply_strategy
 from performance import evaluate_performance
 from config import config_params
@@ -53,12 +53,29 @@ def run():
 
     # # Apply machine learning
     print('Applying machine learning... [' + str(datetime.datetime.utcnow()) + ']')
-    runtime_dict['start_machine_learning'] = datetime.datetime.utcnow()
-    ml_dict = apply_machine_learning(
-        finage_df,
+
+    runtime_dict['start_indicators'] = datetime.datetime.utcnow()    # generate indicators
+    indicator_df = calculate_indicators(
+        finage_df
     )
-    runtime_dict['end_machine_learning'] = datetime.datetime.utcnow()
-    runtime_dict['machine_learning_runtime'] = runtime_dict['end_machine_learning'] - runtime_dict['start_machine_learning']
+    runtime_dict['end_indicators'] = datetime.datetime.utcnow()
+
+    runtime_dict['start_h2o_offline_model_predictions'] = datetime.datetime.utcnow()    # run h2o models offline
+    offline_ml_dict = apply_offline_machine_learning(
+        indicator_df,
+    )
+    runtime_dict['end_h2o_offline_model_predictions'] = datetime.datetime.utcnow()
+
+    # runtime_dict['start_h2o_online_model_predictions'] = datetime.datetime.utcnow()    # run h2o models online (testing only)
+    # online_ml_dict = apply_online_machine_learning(
+    #     indicator_df,
+    # )
+    # runtime_dict['end_h2o_online_model_predictions'] = datetime.datetime.utcnow()
+
+    runtime_dict['total_indicator_calculation_runtime'] = runtime_dict['end_indicators'] - runtime_dict['start_indicators']    # runtime calcs
+    # runtime_dict['total_h2o_online_runtime'] = runtime_dict['end_h2o_online_model_predictions'] - runtime_dict['start_h2o_online_model_predictions']
+    runtime_dict['total_h2o_offline_runtime'] = runtime_dict['end_h2o_offline_model_predictions'] - runtime_dict['start_h2o_offline_model_predictions']
+    runtime_dict['total_machine_learning_runtime'] = runtime_dict['end_h2o_offline_model_predictions'] - runtime_dict['start_indicators']
 
     # Apply strategy
     print('Applying strategy... [' + str(datetime.datetime.utcnow()) + ']')
@@ -67,7 +84,7 @@ def run():
         falconx_connection,
         finage_df,
         history_df,
-        ml_dict,
+        offline_ml_dict,
     )
     runtime_dict['end_strategy'] = datetime.datetime.utcnow()
     runtime_dict['strategy_runtime'] = runtime_dict['end_strategy'] - runtime_dict['start_strategy']

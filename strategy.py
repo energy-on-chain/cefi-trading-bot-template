@@ -12,14 +12,6 @@ from exchanges.falconx import get_falconx_btc_price_quote, get_all_falconx_accou
 from config import config_params
 
 
-def calculate_amount_to_sell():
-    """ Calculates and returns the amount of BTC we want to sell on exchange based
-    on the input logfile history. """
-    # Get or otherwise calculate the amount of BTC bought... keep that in the logfile somewhere
-    # Access this value and return it
-    pass
-
-
 def apply_strategy(exchange_connection, input_df, log_file_df, ml_dict):
     """ Apply the strategy logic. Returns df with relevant results. """
 
@@ -31,6 +23,12 @@ def apply_strategy(exchange_connection, input_df, log_file_df, ml_dict):
 
     # Identify what trade action to take next
     if median > config_params['threshold']:    # in trade zone
+
+        if not config_params['in_production']:    # value placeholders for development
+            usd_received = None
+            btc_received = None
+            falconx_btc_price_quote = None
+
         if trade_status == 'No Action':
             action = 'Buy'
             if config_params['in_production']:

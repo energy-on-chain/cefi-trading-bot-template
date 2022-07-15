@@ -1,2 +1,6 @@
 .DS_Store
 credentials.json
+scratch.py
+__pycache__/
+exchanges/__pycache__/
+utils/__pycache__/

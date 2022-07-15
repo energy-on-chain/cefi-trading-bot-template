@@ -20,13 +20,13 @@ def calculate_amount_to_sell():
     pass
 
 
-def apply_strategy(exchange_connection, input_df, log_file_df, ml_df):
+def apply_strategy(exchange_connection, input_df, log_file_df, ml_dict):
     """ Apply the strategy logic. Returns df with relevant results. """
 
     # Get current trade status (i.e. are we in an open position or not)
     trade_status = log_file_df['action'].iloc[-1]    # get trade status
-    mean = ml_df['mean'].iloc[-1]    
-    median = ml_df['median'].iloc[-1]    
+    mean = ml_dict['mean']   
+    median = ml_dict['median']   
     action = ''
 
     # Identify what trade action to take next
@@ -78,7 +78,16 @@ def apply_strategy(exchange_connection, input_df, log_file_df, ml_df):
     # Create new results row to append to log file
     input_df.columns = ["Open", "High", "Low", "Close", "Volume", "Unix", "Time"]
     new_entry = input_df.loc[input_df.index[-1], ["Open", "High", "Low", "Close", "Volume", "Unix", "Time"]].to_list()    # add ohlc
-    new_entry = new_entry + ml_df.loc[ml_df.index[-1], ['moving_average', 'meta', 'cci', 'volatility', 'top_variables', 'roc_momentum', 'rsi', 'mean', 'median']].to_list()    # add ml
+    new_entry = new_entry + [ml_dict['moving_average']]
+    new_entry = new_entry + [ml_dict['meta']]
+    new_entry = new_entry + [ml_dict['cci']]
+    new_entry = new_entry + [ml_dict['volatility']]
+    new_entry = new_entry + [ml_dict['top_variables']]
+    new_entry = new_entry + [ml_dict['roc_momentum']]
+    new_entry = new_entry + [ml_dict['rsi']]
+    new_entry = new_entry + [ml_dict['mean']]
+    new_entry = new_entry + [ml_dict['median']]
+    # new_entry = new_entry + ml_df.loc[ml_df.index[-1], ['moving_average', 'meta', 'cci', 'volatility', 'top_variables', 'roc_momentum', 'rsi', 'mean', 'median']].to_list()    # add ml
     new_entry = new_entry + [action]    # add action
     falconx_usd_balance = get_single_falconx_account_balance(exchange_connection, 'USD')    # add exchange state  
     falconx_btc_balance = get_single_falconx_account_balance(exchange_connection, 'BTC') 

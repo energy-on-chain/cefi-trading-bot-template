@@ -14,6 +14,7 @@ import pandas as pd
 import numpy as np
 
 from exchanges.falconx import get_falconx_connection
+from machine_learning import apply_machine_learning
 from strategy import apply_strategy
 from performance import evaluate_performance
 from config import config_params
@@ -31,54 +32,66 @@ def run():
 
     runtime_dict = {}    # place to log the runtimes for each section of interest in the bot
     current_hour = int(datetime.datetime.utcnow().hour)
-    if current_hour in config_params['execution_hours']:
+    # if current_hour in config_params['execution_hours']:    # FIXME: reinstate for production deployment
 
-        print(config_params['name'] + ' - ' + config_params['version'] + ' is scheduled to run this hour! [' + str(datetime.datetime.utcnow()) + ']')
+    print(config_params['name'] + ' - ' + config_params['version'] + ' is scheduled to run this hour! [' + str(datetime.datetime.utcnow()) + ']')
 
-        # Connect exchanges
-        print('\nConnecting exchanges... [' + str(datetime.datetime.utcnow()) + ']')
-        runtime_dict['start_exchanges'] = datetime.datetime.utcnow()
-        falconx_connection = get_falconx_connection()
+    # Connect exchanges
+    print('\nConnecting exchanges... [' + str(datetime.datetime.utcnow()) + ']')
+    runtime_dict['start_exchanges'] = datetime.datetime.utcnow()
+    falconx_connection = get_falconx_connection()
+    runtime_dict['end_exchanges'] = datetime.datetime.utcnow()
+    runtime_dict['exchange_runtime'] = runtime_dict['end_exchanges'] - runtime_dict['start_exchanges']
 
-        # Connect data and model file(s)
-        print('Connecting data... [' + str(datetime.datetime.utcnow()) + ']')
-        finage_df = pd.read_csv(config_params['input_price_file_path'])    # price data for log file 
-        history_df = pd.read_csv(config_params['input_log_file_path'])    # historical bot output file
+    # Connect data files
+    print('Connecting data... [' + str(datetime.datetime.utcnow()) + ']')
+    runtime_dict['start_data'] = datetime.datetime.utcnow()
+    finage_df = pd.read_csv(config_params['input_price_file_path'])    # price data for log file 
+    history_df = pd.read_csv(config_params['input_log_file_path'])    # historical bot output file
+    runtime_dict['end_data'] = datetime.datetime.utcnow()
+    runtime_dict['data_runtime'] = runtime_dict['end_data'] - runtime_dict['start_data']
 
-        # # Apply machine learning
-        # print('Applying machine learning... [' + str(datetime.datetime.utcnow()) + ']')
-        # print('FIXME: machine learning is performed in R for the current version of this bot')
+    # # Apply machine learning
+    print('Applying machine learning... [' + str(datetime.datetime.utcnow()) + ']')
+    runtime_dict['start_machine_learning'] = datetime.datetime.utcnow()
+    ml_dict = apply_machine_learning(
+        finage_df,
+    )
+    runtime_dict['end_machine_learning'] = datetime.datetime.utcnow()
+    runtime_dict['machine_learning_runtime'] = runtime_dict['end_machine_learning'] - runtime_dict['start_machine_learning']
 
-        # # Apply strategy
-        # print('Applying strategy... [' + str(datetime.datetime.utcnow()) + ']')
-        # runtime_dict['start_strategy'] = datetime.datetime.utcnow()
-        # strategy_result_df = apply_strategy(
-        #     falconx_connection,
-        #     finage_df,
-        #     history_df,
-        #     ml_df,
-        #     )
-        # runtime_dict['end_strategy'] = datetime.datetime.utcnow()
-        # runtime_dict['strategy_runtime'] = runtime_dict['end_strategy'] - runtime_dict['start_strategy']
+    # Apply strategy
+    print('Applying strategy... [' + str(datetime.datetime.utcnow()) + ']')
+    runtime_dict['start_strategy'] = datetime.datetime.utcnow()
+    strategy_result_df = apply_strategy(
+        falconx_connection,
+        finage_df,
+        history_df,
+        ml_dict,
+    )
+    runtime_dict['end_strategy'] = datetime.datetime.utcnow()
+    runtime_dict['strategy_runtime'] = runtime_dict['end_strategy'] - runtime_dict['start_strategy']
 
-        # # Evaluate performance
-        # print('Evaluating performance... [' + str(datetime.datetime.utcnow()) + ']')
-        # runtime_dict['start_performance'] = datetime.datetime.utcnow()
-        # evaluate_performance(
-        #     strategy_result_df,
-        #     )
-        # runtime_dict['end_performance'] = datetime.datetime.utcnow()
-        # runtime_dict['performance_runtime'] = runtime_dict['end_performance'] - runtime_dict['start_performance']
+    # Evaluate performance
+    print('Evaluating performance... [' + str(datetime.datetime.utcnow()) + ']')
+    runtime_dict['start_performance'] = datetime.datetime.utcnow()
+    evaluate_performance(
+        strategy_result_df,
+    )
+    runtime_dict['end_performance'] = datetime.datetime.utcnow()
+    runtime_dict['performance_runtime'] = runtime_dict['end_performance'] - runtime_dict['start_performance']
 
-        # # Log total runtime
-        # runtime_dict['total_runtime'] = runtime_dict['end_performance'] - runtime_dict['start_exchanges']
-        # print('Run complete! [' + str(datetime.datetime.utcnow()) + ']')
-        # for key, value in runtime_dict.items():
-        #     if 'runtime' in key:
-        #         print('{}: {}'.format(key, value))
+    # Log total runtime
+    runtime_dict['total_runtime'] = runtime_dict['end_performance'] - runtime_dict['start_exchanges']
+    print('\nRun complete! [' + str(datetime.datetime.utcnow()) + ']')
+    print('\nRuntime summary (H:MM:SS):')
+    for key, value in runtime_dict.items():
+        if 'runtime' in key:
+            print('{}: {}'.format(key, value))
+    print()
 
-    else: 
-        print(config_params['name'] + ' - ' + config_params['version'] + ' is NOT scheduled to run this hour! [' + str(datetime.datetime.utcnow()) + ']')
+    # else:    #FIXME: reinstate for production deployment
+    #     print(config_params['name'] + ' - ' + config_params['version'] + ' is NOT scheduled to run this hour! [' + str(datetime.datetime.utcnow()) + ']')
 
 
 # ENTRY POINT

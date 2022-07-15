@@ -24,7 +24,7 @@ def bollinger_band(input_df, column_label, rolling_window, standard_deviation):
 
     df['std'] = df[column_label].rolling(rolling_window).std()    # calc rolling standard deviation
 
-    col_name = str(rolling_window) + '__BBands2'    # define output column name
+    col_name = 'X' + str(rolling_window) + '__BBands2'    # define output column name
 
     df['bb_mid'] = df[column_label].rolling(rolling_window).mean()    # calculate rolling mean (BB midpoint)
     df['bb_top'] = df['bb_mid'] + (standard_deviation * df['std'])    # create top band    
@@ -51,7 +51,7 @@ def roc(input_df, close_label, rolling_window):
 
     df['previous_price'] = df[close_label].shift(rolling_window - 1)
     df['price_change'] = df[close_label] - df['previous_price']    # price change over specified lookback period
-    col_name = str(rolling_window) + ' _ROC'
+    col_name = 'X' + str(rolling_window) + '._ROC'
     df[col_name] = df['price_change'] / df['previous_price']    # raw price change (positive or negative)
 
     df.drop('price_change', axis=1, inplace=True)    # drop unnecessary columns from output
@@ -68,7 +68,7 @@ def sma(input_df, close_label, rolling_window):
 
     df = input_df.copy()
 
-    col_name = str(rolling_window) + ' _SMA'
+    col_name = 'X' + str(rolling_window) + '._SMA'
     df[col_name] = df[close_label].rolling(rolling_window).mean()
 
     return df
@@ -92,7 +92,7 @@ def zlema(input_df, close_label, rolling_window):
         df['ema'].iloc[i + rolling_window + 1] = ((df[close_label].iloc[i + rolling_window + 1] - df['ema'].iloc[i + rolling_window]) * smoothing_factor) + df['ema'].iloc[i + rolling_window]
 
     # calc zlema
-    col_name = str(rolling_window) + ' __ZLEMA'
+    col_name = 'X' + str(rolling_window) + '.__ZLEMA'
     df[col_name] = None
     df[col_name].iloc[lag - 1] = df[close_label].iloc[lag - 1]    # get close price of the lagged day to start the zlema column calc from
     for i, row in enumerate(df[col_name].iloc[lag:]):    
@@ -115,7 +115,7 @@ def momentum(input_df, close_label, rolling_window):
 
     df = input_df.copy()
 
-    col_name = str(rolling_window) + ' _momentum'
+    col_name = 'X' + str(rolling_window) + '._momentum'
     df[col_name] = df[close_label] - df[close_label].shift(periods=rolling_window-1)
 
     return df
@@ -153,7 +153,7 @@ def cci(input_df, high_label, low_label, close_label, rolling_window):
 
     df['mean_deviation_adj'] = df['mean_deviation'] / rolling_window    # normalize by size of rolling window
 
-    col_name = str(rolling_window) + ' __CCI'
+    col_name = 'X' + str(rolling_window) + '.__CCI'
     df[col_name] = (df['typical_price'] - df['typical_price_sma']) / (lambert_constant * df['mean_deviation_adj'])    # calculate cci
 
     df.drop('typical_price', axis=1, inplace=True)    # drop unnecessary columns from output
@@ -194,7 +194,7 @@ def rsi(input_df, close_label, rolling_window):
 
     df['rs'] = df['avg_gain'] / df['avg_loss']    # calculate rs
 
-    col_name = str(rolling_window) + ' _RSI'
+    col_name = 'X' + str(rolling_window) + '._RSI'
     df[col_name] = 100 - (100 / (1 + df['rs']))    # calculate rsi
 
     df.drop('previous_close', axis=1, inplace=True)    # drop unnecessary columns from output
@@ -231,7 +231,7 @@ def money_flow_index(input_df, close_label, high_label, low_label, volume_label,
     df['sum_negative_money_flows'] = df['negative_flow'].rolling(rolling_window).sum()
     df['money_flow_ratio'] = df['sum_positive_money_flows'] / df['sum_negative_money_flows']
 
-    col_name = str(rolling_window) + ' __MFI'   
+    col_name = 'X' + str(rolling_window) + '.__MFI'   
     df[col_name] = 100 - (100 / (1 + df['money_flow_ratio']))
 
     df.drop('typical_price', axis=1, inplace=True)    # drop unnecessary columns from output
@@ -272,7 +272,7 @@ def chande_momentum_oscillator(input_df, close_label, rolling_window):
     df['sum_lower_closes'] = df['lower_closes'].rolling(rolling_window).sum()
 
     # calculate rolling metric
-    col_name = str(rolling_window) + ' _CMO'   
+    col_name = 'X' + str(rolling_window) + '._CMO'   
     df[col_name] = ((df['sum_higher_closes'] - df['sum_lower_closes']) / (df['sum_higher_closes'] + df['sum_lower_closes'])) * 100
 
     df.drop('change', axis=1, inplace=True)    # drop unnecessary columns from output
@@ -302,7 +302,7 @@ def annualized_historical_volatility(input_df, close_label, rolling_window):
     # df['interday_returns'] = (df[close_label] / df['close_shift']) - 1    # FIXME: traditional way to find inter-period percent return (can switch with ln method)
     df['interday_returns'] = np.log(df[close_label] / df['close_shift'])
     df['std'] = df['interday_returns'].rolling(rolling_window).std()    # calc standard dev
-    col_name = str(rolling_window) + ' __volatility'   
+    col_name = 'X' + str(rolling_window) + '.__volatility'   
     df[col_name] = math.sqrt(annualized_factor) * df['std']    # annualize to get result
 
     df.drop('std', axis=1, inplace=True)    # drop unnecessary columns from output
@@ -331,7 +331,7 @@ def garman_klass_volatility(input_df, open_label, high_label, low_label, close_l
     df['combined_terms'] = (0.5 * df['ln(h/l)_squared']) + (constant * df['ln(c/o)_squared'])
     
     # calc rolling indicator
-    col_name = str(rolling_window) + ' __garman.klass'   
+    col_name = 'X' + str(rolling_window) + '.__garman.klass'   
     df[col_name] = df['combined_terms'].rolling(rolling_window).mean()    # sum gk terms
     df[col_name] = np.sqrt(df[col_name])    # take sqrt
 
@@ -358,7 +358,7 @@ def vwap(input_df, close_label, high_label, low_label, volume_label, rolling_win
     df['typical_price'] = ((df[close_label] + df[high_label] + df[low_label]) / 3)
     df['volume_times_price'] = df[volume_label] * df['typical_price']
     df['cumulative_volume'] = df[volume_label].rolling(rolling_window).sum()
-    col_name = str(rolling_window) + ' __VWAP'
+    col_name = 'X' + str(rolling_window) + '.__VWAP'
     df[col_name] = df['volume_times_price'] / df['cumulative_volume']
 
     df.drop('typical_price', axis=1, inplace=True)    # drop unnecessary columns from output
@@ -368,12 +368,6 @@ def vwap(input_df, close_label, high_label, low_label, volume_label, rolling_win
     return df
 
 
-# entry point for development / debugging
-if __name__ == '__main__':
-    os.environ["GOOGLE_APPLICATION_CREDENTIALS"] = "credentials.json"
-    df = pd.read_csv('gs://chainview-capital-dashboard-bucket-official/bots/bot_6/finage_ohlc_BTCUSD_60minute_fast.csv')
-    result = rsi(df, 'c', 10)
-    print(result)
-
 
 # TODO:
+#

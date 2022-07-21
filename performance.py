@@ -1,9 +1,9 @@
 ###############################################################################
-# PROJECT: CVC Project X 2hr Trading Bot
+# PROJECT: EOC CEFI Trading Bot Template 
 # AUTHOR: Matt Hartigan
-# DATE: 6-July-2022
+# DATE: 15-April-2022
 # FILENAME: performance.py
-# DESCRIPTION: Evalates how the trade strategy performed.
+# DESCRIPTION: Evaluates how the trade strategy performed.
 ###############################################################################
 import os
 import shutil

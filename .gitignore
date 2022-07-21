@@ -4,3 +4,6 @@ scratch.py
 __pycache__/
 exchanges/__pycache__/
 utils/__pycache__/
+*.jar
+*.csv
+*.zip

@@ -1,9 +1,10 @@
 ###############################################################################
-# PROJECT: CVC Trading Bot
-# AUTHOR: Matt Hartigan
-# DATE: 21-Feb-2025
 # FILENAME: falconx.py
-# DESCRIPTION: This file handles interface with the CVC falconx account.
+# PROJECT: EOC CEFI Trading Bot Template 
+# CLIENT: 
+# AUTHOR: Matt Hartigan
+# DATE: 21-Feb-2022
+# DESCRIPTION: This file handles interface with the FalconX API.
 ###############################################################################
 import json
 import hmac
@@ -15,16 +16,17 @@ import base64
 from google.cloud import storage
 from google.cloud import secretmanager
 from requests.auth import AuthBase
+
 from config import config_params
 
 
 # CONFIG
 client = secretmanager.SecretManagerServiceClient()    # get authentication info
-project_id = "coherent-emblem-334620"
+project_id = ''    # FIXME: add your credentials here
 
-FALCONX_API_KEY = 'CVC_FALCONX_LIGHTICEDEV_API_KEY'
-FALCONX_PASSPHRASE = 'CVC_FALCONX_LIGHTICEDEV_PASSPHRASE'
-FALCONX_SECRET = 'CVC_FALCONX_LIGHTICEDEV_API_SECRET_KEY'
+FALCONX_API_KEY = ''    # FIXME: add your value here
+FALCONX_PASSPHRASE = ''    # FIXME: add your value here
+FALCONX_SECRET = ''    # FIXME: add your value here
 falconx_api_key = client.access_secret_version({"name": f"projects/{project_id}/secrets/{FALCONX_API_KEY}/versions/latest"}).payload.data.decode('UTF-8')
 falconx_passphrase = client.access_secret_version({"name": f"projects/{project_id}/secrets/{FALCONX_PASSPHRASE}/versions/latest"}).payload.data.decode('UTF-8')
 falconx_secret= client.access_secret_version({"name": f"projects/{project_id}/secrets/{FALCONX_SECRET}/versions/latest"}).payload.data.decode('UTF-8')
@@ -75,14 +77,14 @@ def get_falconx_btc_price_quote(auth):
         'side': 'buy'
     }
     r = requests.post(api_url + 'quotes', json=params, auth=auth)
-    # print('FalconX Quote details...')
-    # print('Buy price for 1 BTC: ' + str(r.json()['buy_price']))
-    # print('Gross fee bps: ' + str(r.json()['gross_fee_bps']))
-    # print('Gross fee usd: ' + str(r.json()['gross_fee_usd']))
-    # print('Rebate bps: ' + str(r.json()['rebate_bps']))
-    # print('Rebate usd: ' + str(r.json()['rebate_usd']))
-    # print('Fee bps: ' + str(r.json()['fee_bps']))
-    # print('Fee usd: ' + str(r.json()['fee_usd']))
+    print('FalconX Quote details...')
+    print('Buy price for 1 BTC: ' + str(r.json()['buy_price']))
+    print('Gross fee bps: ' + str(r.json()['gross_fee_bps']))
+    print('Gross fee usd: ' + str(r.json()['gross_fee_usd']))
+    print('Rebate bps: ' + str(r.json()['rebate_bps']))
+    print('Rebate usd: ' + str(r.json()['rebate_usd']))
+    print('Fee bps: ' + str(r.json()['fee_bps']))
+    print('Fee usd: ' + str(r.json()['fee_usd']))
     return [float(r.json()['buy_price']), r.json()['fx_quote_id']]
 
 def get_all_falconx_accounts(auth):
@@ -104,7 +106,7 @@ def get_falconx_token_pairs(auth):
     response = requests.get(api_url + 'pairs', auth=auth)
     return response.json()
 
-def place_falconx_market_order(auth, amount, product_id, side):
+def place_falconx_market_order(auth, amount_usd, product_id, side):
     """ Places a market order on FalconX. """
     print('Placing market ' + side + ' order on FalconX...')
     falconx_usd = get_single_falconx_account_balance(auth, 'USD')
@@ -113,21 +115,21 @@ def place_falconx_market_order(auth, amount, product_id, side):
     print('FalconX BTC account balance before trade: ' + str(falconx_btc))
 
     if side == 'buy':    # buy into a BTC position
-        if falconx_usd <= amount:
-            return 'CVC calculates that there is not a sufficient balance in the FalconX account currently. No action taken.'
+        if falconx_usd <= 0:
+            return 'There is a negative or zero balance in the FalconX account currently. No action taken.'
         else:
             token = 'BTC'
             side_for_falconx_api = 'buy'
             quote = get_falconx_btc_price_quote(auth)[0]
-            value = round(amount / quote, 8)    # divide the bet size by the dollar per btc quote to get the amount of btc to be purchased
+            value = round(amount_usd / quote, 8)
 
     elif side == 'sell':    # selling out of a BTC position into USD
-        if falconx_btc <= amount:
-            return 'CVC calculates that there is not a sufficient BTC balance in the FalconX account currently. No action taken'
+        if falconx_btc <= 0:
+            return 'There is a negative or zero BTC balance in the FalconX account currently. No action taken'
         else:
             token = 'BTC'
             side_for_falconx_api = 'sell'
-            value = round_decimals_down(amount, 8)    # sell the user input amount of btc    
+            value = round_decimals_down(get_single_falconx_account_balance(auth, 'BTC'), 8)    # sell out of entire BTC position held in the account
     data = {
             "token_pair": {
                 "base_token": product_id[0],
@@ -141,11 +143,14 @@ def place_falconx_market_order(auth, amount, product_id, side):
             "order_type": "market",
         }
 
-    response = requests.post(api_url + 'order', auth=auth, json=data)
-    print('FalconX USD account balance after trade: ' + str(get_single_falconx_account_balance(auth, 'USD')))
-    print('FalconX BTC account balance after trade: ' + str(get_single_falconx_account_balance(auth, 'BTC')))
-    return response.json()
-
+    if config_params['in_production']:     
+        response = requests.post(api_url + 'order', auth=auth, json=data)
+        print('FalconX USD account balance after trade: ' + str(get_single_falconx_account_balance(auth, 'USD')))
+        print('FalconX BTC account balance after trade: ' + str(get_single_falconx_account_balance(auth, 'BTC')))
+        return response.json()
+    else:
+        print('Not in production mode, no trade actually executed.')
+        return 'Not in production mode, no trade actually executed.'
 
 def round_decimals_down(number, decimals):
     """ Returns a value rounded down to a specific number of decimal places. """
@@ -158,5 +163,4 @@ def round_decimals_down(number, decimals):
 
     factor = 10 ** decimals
     return math.floor(number * factor) / factor
-
 

@@ -1,9 +1,10 @@
 ###############################################################################
-# PROJECT: CVC Trading Bot
+# FILENAME: coinbase.py
+# PROJECT: EOC CEFI Trading Bot Template 
+# CLIENT: 
 # AUTHOR: Matt Hartigan
 # DATE: 21-Feb-2022
-# FILENAME: coinbase_prime.py
-# DESCRIPTION: This file handles interface with the CVC CB prime account.
+# DESCRIPTION: This file handles interface with the FalconX API.
 ###############################################################################
 import time
 import datetime
@@ -22,11 +23,11 @@ from config import config_params
 
 # CONFIG
 client = secretmanager.SecretManagerServiceClient()    # get authentication info
-project_id = "coherent-emblem-334620"
+project_id = ""    # FIXME: add your value here
 
-CB_PRIME_API_KEY = 'CVC_COINBASE_DARKICE_API_KEY'
-CB_PRIME_PASSPHRASE = 'CVC_COINBASE_DARKICE_API_PASSPHRASE'
-CB_PRIME_SECRET = 'CVC_COINBASE_DARKICE_API_SECRET'
+CB_PRIME_API_KEY = ''    # FIXME: add your value here
+CB_PRIME_PASSPHRASE = ''    # FIXME: add your value here
+CB_PRIME_SECRET = ''    # FIXME: add your value here
 cb_prime_api_key = client.access_secret_version({"name": f"projects/{project_id}/secrets/{CB_PRIME_API_KEY}/versions/latest"}).payload.data.decode('UTF-8')
 cb_prime_passphrase = client.access_secret_version({"name": f"projects/{project_id}/secrets/{CB_PRIME_PASSPHRASE}/versions/latest"}).payload.data.decode('UTF-8')
 cb_prime_secret= client.access_secret_version({"name": f"projects/{project_id}/secrets/{CB_PRIME_SECRET}/versions/latest"}).payload.data.decode('UTF-8')
@@ -129,3 +130,4 @@ def get_coinbase_trade_fees(auth, acct):
                 print(item)
                 fees = fees + float(item['amount'])
     return fees
+

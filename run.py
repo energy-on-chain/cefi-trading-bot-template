@@ -1,8 +1,9 @@
 ###############################################################################
-# PROJECT: CVC Project X 2hr Trading Bot
+# PROJECT: EOC CEFI Trading Bot Template 
 # AUTHOR: Matt Hartigan
-# DATE: 6-July-2022
+# DATE: 15-April-2022
 # FILENAME: run.py
+# DESCRIPTION: Defines the logic and criteria for bot entering / exiting trades.
 # DESCRIPTION: Main runfile and entry point for bot.
 ###############################################################################
 import os
@@ -21,7 +22,7 @@ from config import config_params
 
 
 # AUTHENTICATE 
-os.environ["GOOGLE_APPLICATION_CREDENTIALS"]="credentials.json"
+os.environ["GOOGLE_APPLICATION_CREDENTIALS"]=""    # FIXME: add your creds here
 
 
 def alive():
@@ -32,83 +33,77 @@ def run():
 
     runtime_dict = {}    # place to log the runtimes for each section of interest in the bot
     current_hour = int(datetime.datetime.utcnow().hour)
-    # if current_hour in config_params['execution_hours']:    # FIXME: reinstate for production deployment
+    
+    if current_hour in config_params['execution_hours']:    
 
-    print(config_params['name'] + ' - ' + config_params['version'] + ' is scheduled to run this hour! [' + str(datetime.datetime.utcnow()) + ']')
+        print(config_params['name'] + ' - ' + config_params['version'] + ' is scheduled to run this hour! [' + str(datetime.datetime.utcnow()) + ']')
 
-    # Connect exchanges
-    print('\nConnecting exchanges... [' + str(datetime.datetime.utcnow()) + ']')
-    runtime_dict['start_exchanges'] = datetime.datetime.utcnow()
-    falconx_connection = get_falconx_connection()
-    runtime_dict['end_exchanges'] = datetime.datetime.utcnow()
-    runtime_dict['exchange_runtime'] = runtime_dict['end_exchanges'] - runtime_dict['start_exchanges']
+        # Connect exchanges
+        print('\nConnecting exchanges... [' + str(datetime.datetime.utcnow()) + ']')
+        runtime_dict['start_exchanges'] = datetime.datetime.utcnow()
+        falconx_connection = get_falconx_connection()
+        runtime_dict['end_exchanges'] = datetime.datetime.utcnow()
+        runtime_dict['exchange_runtime'] = runtime_dict['end_exchanges'] - runtime_dict['start_exchanges']
 
-    # Connect data files
-    print('Connecting data... [' + str(datetime.datetime.utcnow()) + ']')
-    runtime_dict['start_data'] = datetime.datetime.utcnow()
-    finage_df = pd.read_csv(config_params['input_price_file_path'])    # price data for log file 
-    history_df = pd.read_csv(config_params['input_log_file_path'])    # historical bot output file
-    runtime_dict['end_data'] = datetime.datetime.utcnow()
-    runtime_dict['data_runtime'] = runtime_dict['end_data'] - runtime_dict['start_data']
+        # Connect data files
+        print('Connecting data... [' + str(datetime.datetime.utcnow()) + ']')
+        runtime_dict['start_data'] = datetime.datetime.utcnow()
+        price_df = pd.read_csv(config_params['input_price_file_path'])    # price data for log file 
+        history_df = pd.read_csv(config_params['input_log_file_path'])    # historical bot output file
+        runtime_dict['end_data'] = datetime.datetime.utcnow()
+        runtime_dict['data_runtime'] = runtime_dict['end_data'] - runtime_dict['start_data']
 
-    # # Apply machine learning
-    print('Applying machine learning... [' + str(datetime.datetime.utcnow()) + ']')
+        # # Apply machine learning
+        print('Applying machine learning... [' + str(datetime.datetime.utcnow()) + ']')
 
-    runtime_dict['start_indicators'] = datetime.datetime.utcnow()    # generate indicators
-    indicator_df = calculate_indicators(
-        finage_df
-    )
-    runtime_dict['end_indicators'] = datetime.datetime.utcnow()
+        runtime_dict['start_indicators'] = datetime.datetime.utcnow()    # generate indicators
+        indicator_df = calculate_indicators(
+            price_df
+        )
+        runtime_dict['end_indicators'] = datetime.datetime.utcnow()
 
-    runtime_dict['start_h2o_offline_model_predictions'] = datetime.datetime.utcnow()    # run h2o models offline
-    offline_ml_dict = apply_offline_machine_learning(
-        indicator_df,
-    )
-    runtime_dict['end_h2o_offline_model_predictions'] = datetime.datetime.utcnow()
+        runtime_dict['start_h2o_model_predictions'] = datetime.datetime.utcnow()    # run ml
+        ml_dict = apply_machine_learning(
+            indicator_df,
+        )
+        runtime_dict['end_h2o_model_predictions'] = datetime.datetime.utcnow()
 
-    # runtime_dict['start_h2o_online_model_predictions'] = datetime.datetime.utcnow()    # run h2o models online (testing only)
-    # online_ml_dict = apply_online_machine_learning(
-    #     indicator_df,
-    # )
-    # runtime_dict['end_h2o_online_model_predictions'] = datetime.datetime.utcnow()
+        runtime_dict['total_indicator_calculation_runtime'] = runtime_dict['end_indicators'] - runtime_dict['start_indicators']    # runtime calcs
+        runtime_dict['total_h2o_runtime'] = runtime_dict['end_h2o_model_predictions'] - runtime_dict['start_h2o_online_model_predictions']
+        runtime_dict['total_machine_learning_runtime'] = runtime_dict['end_h2o_model_predictions'] - runtime_dict['start_indicators']
 
-    runtime_dict['total_indicator_calculation_runtime'] = runtime_dict['end_indicators'] - runtime_dict['start_indicators']    # runtime calcs
-    # runtime_dict['total_h2o_online_runtime'] = runtime_dict['end_h2o_online_model_predictions'] - runtime_dict['start_h2o_online_model_predictions']
-    runtime_dict['total_h2o_offline_runtime'] = runtime_dict['end_h2o_offline_model_predictions'] - runtime_dict['start_h2o_offline_model_predictions']
-    runtime_dict['total_machine_learning_runtime'] = runtime_dict['end_h2o_offline_model_predictions'] - runtime_dict['start_indicators']
+        # Apply strategy
+        print('Applying strategy... [' + str(datetime.datetime.utcnow()) + ']')
+        runtime_dict['start_strategy'] = datetime.datetime.utcnow()
+        strategy_result_df = apply_strategy(
+            falconx_connection,
+            price_df,
+            history_df,
+            offline_ml_dict,
+        )
+        runtime_dict['end_strategy'] = datetime.datetime.utcnow()
+        runtime_dict['strategy_runtime'] = runtime_dict['end_strategy'] - runtime_dict['start_strategy']
 
-    # Apply strategy
-    print('Applying strategy... [' + str(datetime.datetime.utcnow()) + ']')
-    runtime_dict['start_strategy'] = datetime.datetime.utcnow()
-    strategy_result_df = apply_strategy(
-        falconx_connection,
-        finage_df,
-        history_df,
-        offline_ml_dict,
-    )
-    runtime_dict['end_strategy'] = datetime.datetime.utcnow()
-    runtime_dict['strategy_runtime'] = runtime_dict['end_strategy'] - runtime_dict['start_strategy']
+        # Evaluate performance
+        print('Evaluating performance... [' + str(datetime.datetime.utcnow()) + ']')
+        runtime_dict['start_performance'] = datetime.datetime.utcnow()
+        evaluate_performance(
+            strategy_result_df,
+        )
+        runtime_dict['end_performance'] = datetime.datetime.utcnow()
+        runtime_dict['performance_runtime'] = runtime_dict['end_performance'] - runtime_dict['start_performance']
 
-    # Evaluate performance
-    print('Evaluating performance... [' + str(datetime.datetime.utcnow()) + ']')
-    runtime_dict['start_performance'] = datetime.datetime.utcnow()
-    evaluate_performance(
-        strategy_result_df,
-    )
-    runtime_dict['end_performance'] = datetime.datetime.utcnow()
-    runtime_dict['performance_runtime'] = runtime_dict['end_performance'] - runtime_dict['start_performance']
+        # Log total runtime
+        runtime_dict['total_runtime'] = runtime_dict['end_performance'] - runtime_dict['start_exchanges']
+        print('\nRun complete! [' + str(datetime.datetime.utcnow()) + ']')
+        print('\nRuntime summary (H:MM:SS):')
+        for key, value in runtime_dict.items():
+            if 'runtime' in key:
+                print('{}: {}'.format(key, value))
+        print()
 
-    # Log total runtime
-    runtime_dict['total_runtime'] = runtime_dict['end_performance'] - runtime_dict['start_exchanges']
-    print('\nRun complete! [' + str(datetime.datetime.utcnow()) + ']')
-    print('\nRuntime summary (H:MM:SS):')
-    for key, value in runtime_dict.items():
-        if 'runtime' in key:
-            print('{}: {}'.format(key, value))
-    print()
-
-    # else:    #FIXME: reinstate for production deployment
-    #     print(config_params['name'] + ' - ' + config_params['version'] + ' is NOT scheduled to run this hour! [' + str(datetime.datetime.utcnow()) + ']')
+    else:   
+        print(config_params['name'] + ' - ' + config_params['version'] + ' is NOT scheduled to run this hour! [' + str(datetime.datetime.utcnow()) + ']')
 
 
 # ENTRY POINT
@@ -121,7 +116,3 @@ if config_params['in_production']:
 else:
     run()
 
-
-
-# TODO:
-#

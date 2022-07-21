@@ -8,4 +8,4 @@ This repo contains the boiler plate code for an automated trading bot that reads
 - Google Cloud Services (for pulling and storing real-time data)
 
 ## [ BACKGROUND ]
-Energy On Chain has used this base repo to implement automated trading strategies that vary from simple threshold monitors to more complicated machine-learning-based algorithms. Feel free to take the basic ideas and run with them yourself, or get in touch to work on building your idea for a strategy together! 
+Energy On Chain has used this base repo to implement automated trading strategies for clients that vary from simple threshold monitors to more complicated machine-learning-based algorithms. Feel free to take the basic ideas and run with them yourself, or get in touch to work on building your idea for a strategy together! 

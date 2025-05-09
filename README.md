@@ -1,4 +1,4 @@
-# Welcome to Energy On Chain's "cefi-trading-bot-template"!
+# Welcome to Deepwater Digital's "cefi-trading-bot-template"!
 
 ## [ DESCRIPTION ]
 This repo contains the boiler plate code for an automated trading bot that reads in real-time price data, applies trading strategy logic, then executes trades on CEFI exchanges. Because it was written with extensibility in mind, trading strategies, exchange connections, etc. can be easily swapped in and out by adding / removing single lines of code in the main run file (run.py). Whether you have a complicated idea for a strategy or a simple one, you'll be able to implement it here.
